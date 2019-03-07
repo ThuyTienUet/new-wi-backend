@@ -1,0 +1,34 @@
+{
+  "Database": {
+    "dialect": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "user": "root",
+    "password": "qwertyui",
+    "logging": false,
+    "storage": "/tmp/wi_backend.sqlite",
+    "dbName": "wi_backend",
+    "prefix": "wi0710_"
+  },
+  "Application": {
+    "port": 3000
+  },
+  "influx": {
+    "host": "localhost",
+    "port": 8086,
+    "username": "root",
+    "password": "root",
+    "database": "wi_backend"
+  },
+  "redis": {
+    "host": "127.0.0.1",
+    "port": 6379
+  },
+  "Service": {
+    "inventory": "13.250.197.210",
+    "authenticate": "admin.dev.i2g.cloud"
+  },
+  "curveBasePath": "../data",
+  "imageBasePath": "wi-images",
+  "exportPath": "./server/export/exported-files"
+}
