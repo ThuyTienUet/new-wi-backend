@@ -56,6 +56,11 @@ module.exports = function (sequelize, DataTypes) {
             type: DataTypes.TEXT('medium'),
             allowNull: true
         },
+	    note: {
+		    type: DataTypes.STRING(255),
+		    allowNull: true,
+            defaultValue: ''
+	    },
         createdBy: {
             type: DataTypes.STRING(50),
             allowNull: false,

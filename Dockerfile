@@ -17,4 +17,4 @@ ENV NODE_ENV=production
 
 EXPOSE 80
 
-CMD ["node", "new-app.js"]
+CMD ["node", "app.js"]

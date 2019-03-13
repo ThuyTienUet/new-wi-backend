@@ -4,13 +4,12 @@ let asyncLoop = require('async/each');
 let asyncSeries = require('async/parallel');
 let request = require('request');
 let config = require('config');
-// let models = require('../models');
-// let models = require('../new-models');
-let models = require('../models-container')();
+let models = require('../models');
 let openProject = require('../authenticate/opening-project');
 let dbMaster = require('../models-master');
 let async = require('async');
 const crypto = require('crypto');
+const logMessage = require('../log-message');
 
 function createDefaultZoneSetTemplate(zoneSetTemplates, idProject, dbConnection) {
 	return new Promise(resolve => {
@@ -77,7 +76,7 @@ function createDefaultMarkerSetTemplate(markerSetTemplates, idProject, dbConnect
 
 function validationFlow(idFlow, dbConnection) {
 	return new Promise((resolve => {
-		dbConnection.Flow.findById(idFlow, {include: {model: dbConnection.Task}}).then(flow => {
+		dbConnection.Flow.findByPk(idFlow, {include: {model: dbConnection.Task}}).then(flow => {
 			let content = flow.content;
 			async.each(flow.tasks, (task, next) => {
 				let name = task.name;
@@ -178,7 +177,7 @@ function createNewProject(projectInfo, done, dbConnection, username, company) {
 function editProject(projectInfo, done, dbConnection) {
 	delete projectInfo.createdBy;
 	let Project = dbConnection.Project;
-	Project.findById(projectInfo.idProject)
+	Project.findByPk(projectInfo.idProject)
 		.then(function (project) {
 			project.name = projectInfo.name;
 			project.company = projectInfo.company;
@@ -205,7 +204,7 @@ function editProject(projectInfo, done, dbConnection) {
 
 function getProjectInfo(project, done, dbConnection) {
 	let Project = dbConnection.Project;
-	Project.findById(project.idProject)
+	Project.findByPk(project.idProject)
 		.then(function (project) {
 			if (!project) throw "not exits";
 			done(ResponseJSON(ErrorCodes.SUCCESS, "Get info Project success", project));
@@ -281,14 +280,14 @@ function createStorageIfNotExsited(idProject, dbConnection, username, company) {
 	});
 }
 
-async function getProjectList(owner, done, dbConnection, username, realUser, token, company) {
+async function getProjectList(owner, done, dbConnection, username, realUser, token, company, logger) {
 	let databasesList = await getDatabases();
 	dbConnection = models(config.Database.prefix + realUser);
 	let response = [];
 	let projectList = await getSharedProject(token, realUser);
 	let Project = dbConnection.Project;
-	Project.all({
-		order: ['name']
+	Project.findAll({
+		order: ['alias']
 	}).then(function (projects) {
 		asyncLoop(projects, function (project, next) {
 			project = project.toJSON();
@@ -320,9 +319,11 @@ async function getProjectList(owner, done, dbConnection, username, realUser, tok
 						next();
 					}
 				}, function () {
+					logger.info(logMessage("PROJECT", "", "Get List Project success"));
 					done(ResponseJSON(ErrorCodes.SUCCESS, "Get List Project success", response));
 				});
 			} else {
+				logger.info(logMessage("PROJECT", "", "Get List Project success"));
 				done(ResponseJSON(ErrorCodes.SUCCESS, "Get List Project success", response));
 			}
 		});
@@ -367,7 +368,7 @@ async function getProjectFullInfo(payload, done, req) {
 		req.dbConnection = models((config.Database.prefix + req.decoded.realUser));
 	}
 	let dbConnection = req.dbConnection;
-	let project = await dbConnection.Project.findById(payload.idProject);
+	let project = await dbConnection.Project.findByPk(payload.idProject);
 	if (!project) return done(ResponseJSON(ErrorCodes.ERROR_INVALID_PARAMS, "Project not found"));
 
 	let response = project.toJSON();
@@ -388,6 +389,7 @@ async function getProjectFullInfo(payload, done, req) {
 	response.combined_boxes = combined_boxes;
 	response.storage_databases = storage_databases;
 	if (wells.length == 0) {
+		req.logger.info(logMessage("PROJECT", "", "Get full info Project success"));
 		return done(ResponseJSON(ErrorCodes.SUCCESS, "Get full info Project success", response));
 	}
 	asyncLoop(wells, function (well, nextWell) {
@@ -466,16 +468,26 @@ async function getProjectFullInfo(payload, done, req) {
 				}).then(markersets => {
 					cb(null, markersets);
 				});
+			},
+			function (cb) {
+				dbConnection.ImageSet.findAll({
+					where: {idWell: well.idWell},
+					include: {model: dbConnection.Image}
+				}).then(imagesets => {
+					cb(null, imagesets);
+				});
 			}
 		], function (err, result) {
 			wellObj.datasets = result[0];
 			wellObj.zonesets = result[1];
 			wellObj.wellheaders = result[2];
 			wellObj.markersets = result[3];
+			wellObj.imagesets = result[4];
 			response.wells.push(wellObj);
 			nextWell();
 		});
 	}, function () {
+		req.logger.info(logMessage("PROJECT", "", "Get full info Project success"));
 		done(ResponseJSON(ErrorCodes.SUCCESS, "Get full info Project success", response));
 	});
 }
@@ -550,7 +562,7 @@ async function listProjectOffAllUser(payload, done, dbConnection, token) {
 }
 
 function deleteProjectOwner(payload, done, dbConnection) {
-	dbConnection.Project.findById(payload.idProject).then(p => {
+	dbConnection.Project.findByPk(payload.idProject).then(p => {
 		if (p) {
 			p.destroy().then(() => {
 				done(ResponseJSON(ErrorCodes.SUCCESS, "Done", p));

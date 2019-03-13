@@ -2,8 +2,7 @@ let masterTaskSpec = require('../models-master').TaskSpec;
 let async = require('async');
 let wixlsx = require('../utils/xlsx');
 let path = require('path');
-// let userModel = require('../models');
-let models = require('../models-container')();
+let userModel = require('../models');
 let ResponseJSON = require('../response');
 let ErrorCodes = require('../../error-codes').CODES;
 let config = require('config');
@@ -67,7 +66,7 @@ function addTaskSpec(payload, done, dbConnection) {
 }
 
 function infoTaskSpec(payload, done, dbConnection) {
-    dbConnection.TaskSpec.findById(payload.idTaskSpec).then(r => {
+    dbConnection.TaskSpec.findByPk(payload.idTaskSpec).then(r => {
         done(ResponseJSON(ErrorCodes.SUCCESS, "Done", r));
     });
 }
@@ -82,7 +81,7 @@ function listTaskSpec(payload, done, dbConnection) {
 }
 
 function deleteTaskSpec(payload, done, dbConnection) {
-    dbConnection.TaskSpec.findById(payload.idTaskSpec).then(r => {
+    dbConnection.TaskSpec.findByPk(payload.idTaskSpec).then(r => {
         if (r) {
             r.destroy().then(() => {
                 done(ResponseJSON(ErrorCodes.SUCCESS, "Done", r));
@@ -96,7 +95,7 @@ function deleteTaskSpec(payload, done, dbConnection) {
 }
 
 function editTaskSpec(payload, done, dbConnection) {
-    dbConnection.TaskSpec.findById(payload.idTaskSpec).then(r => {
+    dbConnection.TaskSpec.findByPk(payload.idTaskSpec).then(r => {
         if (r) {
             Object.assign(r, payload).save().then(() => {
                 done(ResponseJSON(ErrorCodes.SUCCESS, "Done", r));

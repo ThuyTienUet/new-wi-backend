@@ -2,8 +2,7 @@
 
 let ResponseJSON = require('../response');
 let ErrorCodes = require('../../error-codes').CODES;
-let wiImport = require('wi-import');
-let hashDir = wiImport.hashDir;
+let hashDir = require('../utils/data-tool').hashDir;
 let config = require('config');
 let fs = require('fs');
 let asyncEach = require('async/each');
@@ -93,7 +92,7 @@ function getWellList(payload, done, dbConnection) {
 }
 
 function editWell(wellInfo, done, dbConnection, username) {
-	dbConnection.Well.findById(wellInfo.idWell).then(well => {
+	dbConnection.Well.findByPk(wellInfo.idWell).then(well => {
 		if (well) {
 			if (wellInfo.name && well.name.toUpperCase() !== wellInfo.name.toUpperCase()) {
 				let oldWellName = well.name;
@@ -102,7 +101,7 @@ function editWell(wellInfo, done, dbConnection, username) {
 				well.updatedBy = wellInfo.updatedBy;
 				well.save()
 					.then(function () {
-						dbConnection.Project.findById(well.idProject).then(function (project) {
+						dbConnection.Project.findByPk(well.idProject).then(function (project) {
 							dbConnection.Dataset.findAll({
 								where: {idWell: well.idWell},
 								paranoid: false
@@ -167,7 +166,7 @@ function editWell(wellInfo, done, dbConnection, username) {
 
 function deleteWell(wellInfo, done, dbConnection) {
 	let Well = dbConnection.Well;
-	Well.findById(wellInfo.idWell)
+	Well.findByPk(wellInfo.idWell)
 		.then(function (well) {
 			well.setDataValue('updatedBy', wellInfo.updatedBy);
 			well.destroy({permanently: true, force: true})
@@ -185,7 +184,7 @@ function deleteWell(wellInfo, done, dbConnection) {
 
 function getWellInfo(well, done, dbConnection) {
 	let Well = dbConnection.Well;
-	Well.findById(well.idWell, {include: [{all: true}]})
+	Well.findByPk(well.idWell, {include: [{all: true}]})
 		.then(function (well) {
 			let wellObj = well.toJSON();
 			asyncSeries([
@@ -226,12 +225,21 @@ function getWellInfo(well, done, dbConnection) {
 					}).then(markersets => {
 						cb(null, markersets);
 					});
+				},
+				function (cb) {
+					dbConnection.ImageSet.findAll({
+						where: {idWell: well.idWell},
+						include: {model: dbConnection.Image}
+					}).then(imagesets => {
+						cb(null, imagesets);
+					});
 				}
 			], function (err, result) {
 				wellObj.datasets = result[0];
 				wellObj.zone_sets = result[1];
 				wellObj.well_headers = result[2];
 				wellObj.marker_sets = result[3];
+				wellObj.image_sets = result[4];
 				done(ResponseJSON(ErrorCodes.SUCCESS, "Successfull", wellObj));
 			});
 		})
@@ -242,7 +250,7 @@ function getWellInfo(well, done, dbConnection) {
 
 function getWellFullInfo(well, done, dbConnection) {
 	let Well = dbConnection.Well;
-	Well.findById(well.idWell).then(function (well) {
+	Well.findByPk(well.idWell).then(function (well) {
 		let wellObj = well.toJSON();
 		asyncSeries([
 			function (cb) {
@@ -348,14 +356,14 @@ function getWellInfoByName(well, done, dbConnection) {
 
 async function exportToProject(info, done, dbConnection, username) {
 	let idDesProject = info.idDesProject;
-	let fullWellData = await dbConnection.Well.findById(info.idWell, {
+	let fullWellData = await dbConnection.Well.findByPk(info.idWell, {
 		include: {
 			model: dbConnection.Dataset,
 			include: dbConnection.Curve
 		}
 	});
-	let srcProject = await dbConnection.Project.findById(fullWellData.idProject);
-	let desProject = await dbConnection.Project.findById(idDesProject);
+	let srcProject = await dbConnection.Project.findByPk(fullWellData.idProject);
+	let desProject = await dbConnection.Project.findByPk(idDesProject);
 	dbConnection.Well.create({
 		name: fullWellData.name,
 		topDepth: fullWellData.topDepth,
@@ -412,7 +420,7 @@ function updateWellHeader(payload, done, dbConnection) {
 	checkPermisson(payload.updatedBy, 'well.update', function (pass) {
 		if (pass) {
 			if (payload.idWellHeader) {
-				dbConnection.WellHeader.findById(payload.idWellHeader).then((header) => {
+				dbConnection.WellHeader.findByPk(payload.idWellHeader).then((header) => {
 					Object.assign(header, payload).save().then((rs) => {
 						done(ResponseJSON(ErrorCodes.SUCCESS, "Successful", rs));
 					}).catch(err => {
@@ -474,7 +482,7 @@ function bulkUpdateWellHeader(headers, idWell, done, dbConnection) {
 		}).then(rs => {
 			if (rs[1]) {
 				//create
-				response.push({header: header, result: "CREATED"});
+				response.push({header: rs[0], result: "CREATED"});
 				next();
 			} else {
 				//found
@@ -500,16 +508,30 @@ function bulkUpdateWellHeader(headers, idWell, done, dbConnection) {
 }
 
 
-function importWell(payload, done, dbConnection, username, token) {
-	importFromInventory.importWell(payload, token, function (err, res) {
-		if (err) {
-			console.log(err);
-			done(ResponseJSON(ErrorCodes.ERROR_INVALID_PARAMS, err, err));
+// function importWell(payload, done, dbConnection, username, token) {
+// 	importFromInventory.importWell(payload, token, function (err, res) {
+// 		if (err) {
+// 			console.log(err);
+// 			done(ResponseJSON(ErrorCodes.ERROR_INVALID_PARAMS, err, err));
+// 		} else {
+// 			console.log(res);
+// 			done(ResponseJSON(ErrorCodes.SUCCESS, "Successful", res));
+// 		}
+// 	}, dbConnection, username);
+// }
+
+function deleteWellHeader(payload, done, dbConnection) {
+	dbConnection.WellHeader.findByPk(payload.idWellHeader).then(wh => {
+		if (wh) {
+			wh.destroy().then(() => {
+				done(ResponseJSON(ErrorCodes.SUCCESS, "Done", wh));
+			}).catch(err => {
+				done(ResponseJSON(ErrorCodes.ERROR_INVALID_PARAMS, err.message, err));
+			})
 		} else {
-			console.log(res);
-			done(ResponseJSON(ErrorCodes.SUCCESS, "Successful", res));
+			done(ResponseJSON(ErrorCodes.ERROR_INVALID_PARAMS, "No well header found by id"));
 		}
-	}, dbConnection, username);
+	});
 }
 
 module.exports = {
@@ -522,7 +544,8 @@ module.exports = {
 	getWellHeader: getWellHeader,
 	updateWellHeader: updateWellHeader,
 	bulkUpdateWellHeader: bulkUpdateWellHeader,
-	importWell: importWell,
+	// importWell: importWell,
 	getWellList: getWellList,
-	getWellFullInfo: getWellFullInfo
+	getWellFullInfo: getWellFullInfo,
+	deleteWellHeader: deleteWellHeader
 };

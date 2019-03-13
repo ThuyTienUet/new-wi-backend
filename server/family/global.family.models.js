@@ -4,8 +4,7 @@ let models = require('../models-master');
 let Family = models.Family;
 let FamilyCondition = models.FamilyCondition;
 let FamilySpec = models.FamilySpec;
-// let userModels = require('../models');
-let usermodels = require('../models-container')();
+let userModels = require('../models');
 let asyncLoop = require('async/each');
 
 function createNewFamily(familyInfo, done) {
@@ -27,7 +26,7 @@ function createNewFamily(familyInfo, done) {
 }
 
 function editFamily(familyInfo, done) {
-    Family.findById(familyInfo.idFamily)
+    Family.findByPk(familyInfo.idFamily)
         .then(function (family) {
             delete familyInfo.idFamily;
             Object.assign(family, familyInfo)
@@ -45,7 +44,7 @@ function editFamily(familyInfo, done) {
 }
 
 function deleteFamily(familyInfo, done) {
-    Family.findById(familyInfo.idFamily)
+    Family.findByPk(familyInfo.idFamily)
         .then(function (family) {
             family.destroy()
                 .then(function () {
@@ -61,7 +60,7 @@ function deleteFamily(familyInfo, done) {
 }
 
 function getFamilyInfo(familyInfo, done) {
-    Family.findById(familyInfo.idFamily)
+    Family.findByPk(familyInfo.idFamily)
         .then(function (family) {
             if (!family) throw 'not exists';
             done(ResponseJSON(ErrorCodes.SUCCESS, "Get family info success", family));
@@ -72,7 +71,7 @@ function getFamilyInfo(familyInfo, done) {
 }
 
 function getFamilyList(done) {
-    Family.all()
+    Family.findAll()
         .then(function (families) {
             done(ResponseJSON(ErrorCodes.SUCCESS, "Get List Family success", families));
         })

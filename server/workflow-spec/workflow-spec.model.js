@@ -4,8 +4,7 @@ let ResponseJSON = require('../response');
 let ErrorCodes = require('../../error-codes').CODES;
 let masterWorkflowSpec = require('../models-master').WorkflowSpec;
 let asyncLoop = require('async/each');
-// let userModel = require('../models');
-let models = require('../models-container')();
+let userModel = require('../models');
 let config = require('config');
 
 let createWorkflowSpec = function (data, callback, dbConnection) {
@@ -21,7 +20,7 @@ let createWorkflowSpec = function (data, callback, dbConnection) {
 };
 
 let editWorkflowSpec = function (data, callback, dbConnection) {
-    dbConnection.WorkflowSpec.findById(data.idWorkflowSpec).then(w => {
+    dbConnection.WorkflowSpec.findByPk(data.idWorkflowSpec).then(w => {
         if (w) {
             Object.assign(w, data).save().then(rs => {
                 callback(ResponseJSON(ErrorCodes.SUCCESS, "Successful", rs));
@@ -42,7 +41,7 @@ let editWorkflowSpec = function (data, callback, dbConnection) {
 
 
 let infoWorkflowSpec = function (data, callback, dbConnection) {
-    dbConnection.WorkflowSpec.findById(data.idWorkflowSpec, {include: {all: true}}).then(w => {
+    dbConnection.WorkflowSpec.findByPk(data.idWorkflowSpec, {include: {all: true}}).then(w => {
         if (w) {
             callback(ResponseJSON(ErrorCodes.SUCCESS, "Successful", w));
         } else {
@@ -55,7 +54,7 @@ let infoWorkflowSpec = function (data, callback, dbConnection) {
 
 
 let deleteWorkflowSpec = function (data, callback, dbConnection) {
-    dbConnection.WorkflowSpec.findById(data.idWorkflowSpec).then(w => {
+    dbConnection.WorkflowSpec.findByPk(data.idWorkflowSpec).then(w => {
         if (w) {
             w.destroy().then(() => {
                 callback(ResponseJSON(ErrorCodes.SUCCESS, "Successful", w));

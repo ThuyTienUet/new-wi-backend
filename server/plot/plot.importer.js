@@ -5,6 +5,7 @@ let ResponseJSON = require('../response');
 let ErrorCodes = require('../../error-codes').CODES;
 let createdBy;
 let updatedBy;
+const logMessage = require("../log-message");
 
 function findCurve(curve, dbConnection, idProject, well, dataset) {
 	return new Promise((resolve => {
@@ -115,10 +116,12 @@ function findLine(line, dbConnection, idTrack) {
 	}));
 }
 
-function createPlot(plot, dbConnection, idProject) {
+async function createPlot(plot, dbConnection, idProject, well, dataset) {
 	plot.createdBy = createdBy;
 	plot.updatedBy = updatedBy;
 	plot.idProject = idProject;
+	let curve = await findCurve(plot.reference_curve, dbConnection, idProject, well, dataset);
+	if (curve) plot.referenceCurve = curve.idCurve;
 	return dbConnection.Plot.create(plot);
 }
 
@@ -126,7 +129,7 @@ async function createDepthAxis(depth_axis, dbConnection, idProject, idPlot, well
 	depth_axis.idPlot = idPlot;
 	depth_axis.createdBy = createdBy;
 	depth_axis.updatedBy = updatedBy;
-	depth_axis.unitType = well.unit;
+	// depth_axis.unitType = well.unit;
 	// let well = await findWell(depth_axis.well, dbConnection, idProject);
 	let curve = await findCurve(depth_axis.curve, dbConnection, idProject, well, dataset);
 	depth_axis.idWell = well ? well.idWell : null;
@@ -236,25 +239,25 @@ function createTrack(track, dbConnection, idProject, idPlot, username, well, dat
 	});
 }
 
-module.exports = function (req, done, dbConnection, username) {
+module.exports = function (req, done, dbConnection, username, logger) {
 	createdBy = req.createdBy;
 	updatedBy = req.updatedBy;
-	dbConnection.ParameterSet.findById(req.body.idParameterSet).then(async param => {
+	dbConnection.ParameterSet.findByPk(req.body.idParameterSet).then(async param => {
 		if (!param) {
 			done(ResponseJSON(ErrorCodes.ERROR_INVALID_PARAMS, "No template found"));
 		} else {
 			let myPlot = param.content;
 			let well, dataset;
 			if (req.body.idDataset) {
-				dataset = await dbConnection.Dataset.findById(req.body.idDataset);
-				well = dataset ? await dbConnection.Well.findById(dataset.idWell) : null;
+				dataset = await dbConnection.Dataset.findByPk(req.body.idDataset);
+				well = dataset ? await dbConnection.Well.findByPk(dataset.idWell) : null;
 			} else {
-				well = await dbConnection.Well.findById(req.body.idWell);
+				well = await dbConnection.Well.findByPk(req.body.idWell);
 			}
 			if (!well) return done(ResponseJSON(ErrorCodes.ERROR_INVALID_PARAMS, "No well found by id"));
 			let idProject = req.body.idProject || well.idProject;
 			myPlot.name = dataset ? req.body.plotName + "-" + well.name + "/" + dataset.name : req.body.plotName + "-" + well.name;
-			createPlot(myPlot, dbConnection, idProject).then(pl => {
+			createPlot(myPlot, dbConnection, idProject, well, dataset).then(pl => {
 				async.series([
 					function (cb) {
 						async.each(myPlot.tracks, (track, nextTrack) => {
@@ -285,6 +288,7 @@ module.exports = function (req, done, dbConnection, username) {
 						}, cb)
 					}
 				], () => {
+					logger.info(logMessage("PLOT", pl.idPlot, "Created from template"));
 					done(ResponseJSON(ErrorCodes.SUCCESS, "Done", pl));
 				});
 			}).catch(err => {

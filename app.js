@@ -10,6 +10,8 @@ let markerTemplateUpdate = require('./server/marker-template/marker-template.fun
 let markerSetTemplateUpdate = require('./server/marker-template/marker-template.function').importMarkerSetTemplate;
 let flowTemplateUpdate = require('./server/flow/sync-master-flow');
 
+const fs = require('fs');
+let path = require('path');
 const QUEUE_TIME = 500;
 
 const EventEmitter = require('events');
@@ -34,7 +36,6 @@ Object.defineProperty(Array.prototype, "forEachDone", {
 });
 
 setTimeout(function () {
-	const fs = require('fs');
 	fs.appendFileSync('./pids.pid', process.pid + '\n');
 	main();
 	// let familySystemSync = require('./server/family/FamilySystemSync');
@@ -63,14 +64,11 @@ function main() {
 	let express = require('express');
 	let app = express();
 	let morgan = require('morgan');
-	let path = require('path');
-	let fs = require('fs');
 	let os = require('os');
 	const cors = require('cors');
 	let fullConfig = require('config');
-	console.log(fullConfig)
 	let config = fullConfig.Application;
-	let influx = require('./server/utils/influx/index');
+	// let influx = require('./server/utils/influx/index');
 	require('./server/utils/redis');
 	let projectRouter = require('./server/project/project.router');
 	let wellRouter = require('./server/well/well.router');
@@ -79,7 +77,7 @@ function main() {
 	let curveRouter = require('./server/curve/curve.router');
 	let trackRouter = require('./server/track/track.router');
 	let depthAxisRouter = require('./server/depth-axis/depth-axis.router');
-	let uploadRouter = require('./server/upload/index');
+	// let uploadRouter = require('./server/upload/index');
 	let datasetRouter = require('./server/dataset/dataset.router');
 	let lineRouter = require('./server/line/line.router');
 	let shadingRouter = require('./server/shading/shading.router');
@@ -87,7 +85,6 @@ function main() {
 	let zoneSetRouter = require('./server/zone-set/zone-set.router');
 	let zoneRouter = require('./server/zone/zone.router');
 	let imageUpload = require('./server/image-upload');
-	let imageRouter = require('./server/image/image.router');
 	let crossPlotRouter = require('./server/cross-plot/cross-plot.router');
 	let pointSetRouter = require('./server/pointset/pointset.router');
 	let polygonRouter = require('./server/polygon/polygon.router');
@@ -134,6 +131,11 @@ function main() {
 	let resetDefaulParameters = require('./server/reset-parameter/reset-pamameter.router');
 	let permissionRouter = require('./server/permission/permission.router');
 	let storageDatabseRouter = require('./server/storage-database/storage-database.router');
+	let imageRouter = require('./server/image/image.router');
+	let imageSetRouter = require('./server/image-set/image-set.router');
+	let logViewRouter = require('./server/log-view/log-view.router');
+	let analysisRouter = require('./server/analysis/analysis.router');
+	// let projectLogRouter = require('./server/project-log/project-log.router');
 	let queue = {};
 	let http = require('http').Server(app);
 	let bodyParser = require('body-parser');
@@ -162,7 +164,34 @@ function main() {
 	}
 
 	let request = require('request');
-
+	// app.post('/phrase/new', (req, res) => {
+	// 	let responseJSON = require('./server/response');
+	// 	let filePath = path.join(__dirname, 'phrase.json');
+	// 	if (!fs.existsSync(filePath)) {
+	// 		fs.writeFileSync(filePath, "{}");
+	// 	}
+	// 	let newPhrase = JSON.parse(fs.readFileSync(filePath).toString());
+	// 	Object.assign(newPhrase, req.body);
+	// 	fs.writeFileSync(filePath, JSON.stringify(newPhrase));
+	// 	res.json(responseJSON(200, "Done", newPhrase));
+	// });
+	// app.post('/phrase/get', (req, res) => {
+	// 	let responseJSON = require('./server/response');
+	// 	let filePath = path.join(__dirname, 'phrase.json');
+	// 	if (!fs.existsSync(filePath)) {
+	// 		fs.writeFileSync(filePath, "{}");
+	// 	}
+	// 	let newPhrase = JSON.parse(fs.readFileSync(filePath).toString());
+	// 	res.json(responseJSON(200, "Done", newPhrase));
+	// });
+	// app.get('/phrase/clear', (req, res) => {
+	// 	let filePath = path.join(__dirname, 'phrase.json');
+	// 	if (!fs.existsSync(filePath)) {
+	// 		fs.writeFileSync(filePath, "{}");
+	// 	}
+	// 	fs.writeFileSync(filePath, "{}");
+	// 	res.send("Done");
+	// });
 	app.get('/update', function (req, res) {
 		let familySystemSync = require('./server/family/FamilySystemSync');
 		familySystemSync(function () {
@@ -223,22 +252,22 @@ function main() {
 			let duration = Date.now() - start;
 			// profiles.emit('route', {req, elapsedMS: duration});
 			console.log(req.decoded.username, (req.header('x-real-ip') || req.ip), req.method, req.originalUrl, `${duration}ms`);
-			influx.writePoints([
-				{
-					measurement: 'response_times',
-					tags: {username: req.decoded.username, path: req.originalUrl,},
-					fields: {duration, ipaddr: (req.header('x-real-ip') || req.ip), pid: process.pid},
-				}
-			]).catch(err => {
-				next();
-				console.error(`Error saving data to InfluxDB! ${err.stack}`)
-			})
+			// influx.writePoints([
+			// 	{
+			// 		measurement: 'response_times',
+			// 		tags: {username: req.decoded.username, path: req.originalUrl,},
+			// 		fields: {duration, ipaddr: (req.header('x-real-ip') || req.ip), pid: process.pid},
+			// 	}
+			// ]).catch(err => {
+			// 	next();
+			// 	console.error(`Error saving data to InfluxDB! ${err.stack}`)
+			// })
 		});
 		next();
 	});
 	app.use('/', patternRouter);
 	app.use('/', inventoryRouter);
-	app.use('/', uploadRouter);
+	// app.use('/', uploadRouter);
 	app.use('/', projectRouter);
 	app.use('/', familyRouter);
 	app.use('/', familyUnitRouter);
@@ -251,6 +280,8 @@ function main() {
 	app.use('/', markerSetTemplateRouter);
 	app.use('/', markerTemplateRouter);
 	app.use('/', taskSpecRouter);
+	app.use('/project/well', imageSetRouter);
+	app.use('/project/well/image-set', imageRouter);
 	app.use('/project', parameterSetRouter);
 	app.use('/project', storageDatabseRouter);
 	app.use('/permission', permissionRouter);
@@ -269,6 +300,8 @@ function main() {
 	app.use('/project/well', markerSetRouter);
 	app.use('/project', flowRouter);
 	app.use('/project/flow', taskRouter);
+	app.use('/project', analysisRouter);
+	// app.use('/project', projectLogRouter);
 	//middleware for all curve router to block spam request
 	app.use('/project/well/dataset/curve', function (req, res, next) {
 		if (!queue[req.decoded.username]) {
@@ -293,7 +326,6 @@ function main() {
 	app.use('/project/well/marker-set', markerRouter);
 	app.use('/project/plot/track', shadingRouter);
 	app.use('/project/plot/track', lineRouter);
-	app.use('/project/plot/track', imageRouter);
 	app.use('/project/plot/track', annotationRouter);
 	app.use('/project/well/dataset', curveRouter);//change
 	app.use('/project/well/zone-set', zoneRouter);
@@ -307,6 +339,8 @@ function main() {
 	app.use('/project/plot/object-track', objectOfTrackRouter);
 	app.use('/project/plot/image-track', imageOfTrackRouter);
 	app.use('/export', exportRouter);
+	app.use('/log-view', logViewRouter);
+
 
 	accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), {flags: 'a'});
 	app.use(morgan('combined', {stream: accessLogStream}));

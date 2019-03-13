@@ -16,6 +16,16 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: false,
             defaultValue: 1
         },
+	    note: {
+		    type: DataTypes.STRING(255),
+		    allowNull: true,
+            defaultValue: ''
+	    },
+	    lockable: {
+		    type: DataTypes.BOOLEAN,
+		    allowNull: false,
+		    defaultValue: 0
+	    },
         createdBy: {
             type: DataTypes.STRING(50),
             allowNull: false,

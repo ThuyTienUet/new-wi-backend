@@ -4,8 +4,7 @@ let express = require('express');
 let router = express.Router();
 let lineModel = require('./line.model');
 let bodyParser = require('body-parser');
-let models = require('../models-container')();
-let Line = models.Line;
+let Line = require('../models').Line;
 
 router.use(bodyParser.json());
 
