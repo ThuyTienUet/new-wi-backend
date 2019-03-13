@@ -11,10 +11,13 @@ var auto = new SequelizeAuto('wi1004_hoang', 'root', '', {
 	// additional: {
 	//     timestamps: false
 	//     //...
-	// },
+	// },    
 	// tables: ['pets']
 	//...
 })
+
+     
+
 auto.run(function (err) {
 	if (err) throw err;
     /**
