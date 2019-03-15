@@ -225,7 +225,7 @@ function main() {
 	});
 	app.use('/', globalFamilyRouter);
 	app.get('/', function (req, res) {
-		res.send("WELCOME TO WI-SYSTEM");
+		res.send("WELCOME TO NEW-WI-BACKEND");
 	});
 	app.use('/', databaseRouter);
 	authenticate = require('./server/authenticate/authenticate');
