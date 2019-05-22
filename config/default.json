@@ -4,14 +4,14 @@
     "host": "localhost",
     "port": 3306,
     "user": "root",
-    "password": "qwertyui",
+    "password": "",
     "logging": false,
     "storage": "/tmp/wi_backend.sqlite",
     "dbName": "wi_backend",
     "prefix": "wi0710_"
   },
   "Application": {
-    "port": 3000
+    "port": 3001
   },
   "influx": {
     "host": "localhost",
